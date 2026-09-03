@@ -1,0 +1,9 @@
+cd /usr/local/src/vm-doc-server-0.13.0
+
+sed -i '/Collector:.*CollectorConfig{Workers: 1},/a\
+\t\tInventory:         InventoryConfig{RetainSnapshotsPerAgent: 30, RetainDays: 90, CleanupInterval: Duration(24 * time.Hour)},' \
+internal/config/config_test.go
+
+gofmt -w internal/config/config_test.go
+
+GOPROXY=off GOFLAGS=-mod=vendor go test ./...
