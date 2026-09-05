@@ -1,9 +1,0 @@
-UPDATE agents
-SET update_state='current',
-    update_available_version='',
-    update_last_success_at=UTC_TIMESTAMP(6),
-    update_last_error='',
-    update_status_checked_at=UTC_TIMESTAMP(6)
-WHERE update_available_version <> ''
-  AND update_available_version = agent_version
-  AND update_state <> 'current';
