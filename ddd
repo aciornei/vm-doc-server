@@ -1,0 +1,27 @@
+cd /usr/local/src/vm-doc-server-0.18.2
+
+python3 - <<'PY'
+from pathlib import Path
+
+# 1. Corectăm migrarea pentru instalări viitoare
+p = Path("migrations/035_backup_policy_cron_timezone.up.sql")
+s = p.read_text()
+s = s.replace(
+    "cron_backup_notes TEXT NOT NULL AFTER cron_backup_command",
+    "cron_backup_notes TEXT NOT NULL DEFAULT '' AFTER cron_backup_command"
+)
+p.write_text(s)
+
+# 2. Corectăm INSERT-ul pentru backup cron
+p = Path("internal/veeam/service.go")
+s = p.read_text()
+s = s.replace(
+    """VALUES(?,'manual',0,?,?,?,'') ON DUPLICATE KEY UPDATE""",
+    """VALUES(?,'manual',0,?,?,?,?,'') ON DUPLICATE KEY UPDATE"""
+)
+p.write_text(s)
+
+print("OK - cron_backup_notes si INSERT cron corectate")
+PY
+
+gofmt -w internal/veeam/service.go
