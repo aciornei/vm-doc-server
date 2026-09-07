@@ -1,0 +1,75 @@
+cd /usr/local/src/vm-doc-server-0.18.2
+
+python3 - <<'PY'
+from pathlib import Path
+import re
+
+p = Path("internal/veeam/service.go")
+s = p.read_text()
+
+# 1. Backup cron manual
+pattern = re.compile(
+    r'\t_, err := s\.DB\.ExecContext\(ctx, `INSERT INTO vm_backup_summary\(vm_id,provider,protected,cron_backup_enabled,cron_backup_schedule,cron_backup_command,cron_backup_notes,error_message\).*?`, vmID, in\.Enabled, in\.Schedule, in\.Command, in\.Notes\)',
+    re.S,
+)
+
+replacement = '''\t_, err := s.DB.ExecContext(ctx, `INSERT INTO vm_backup_summary SET
+  vm_id=?,provider='manual',protected=0,
+  cron_backup_enabled=?,cron_backup_schedule=?,cron_backup_command=?,cron_backup_notes=?,error_message=''
+ON DUPLICATE KEY UPDATE
+  cron_backup_enabled=VALUES(cron_backup_enabled),
+  cron_backup_schedule=VALUES(cron_backup_schedule),
+  cron_backup_command=VALUES(cron_backup_command),
+  cron_backup_notes=VALUES(cron_backup_notes)`, vmID, in.Enabled, in.Schedule, in.Command, in.Notes)'''
+
+s, n1 = pattern.subn(replacement, s, 1)
+
+# 2. VM protejata Veeam
+pattern = re.compile(
+    r'\t\t_, err = tx\.ExecContext\(ctx, `INSERT INTO vm_backup_summary\(vm_id,provider,veeam_source_id,source_name,protected,job_name,policy_name,repository_name,primary_repository_name,secondary_repository_names,schedule_text,retention_type,retention_quantity,gfs_weekly_weeks,gfs_weekly_day,gfs_monthly_months,gfs_monthly_week,gfs_yearly_years,gfs_yearly_month,last_result,last_backup_at,next_run_at,restore_points,synced_at,error_message,raw_json(?:,cron_backup_notes)?\).*?`,\n\s*vmID, sourceID, record\.Name, summary\.protected, summary\.jobNames, summary\.policyName, summary\.repositories, summary\.primaryRepository, summary\.secondaryRepositories, summary\.scheduleText, summary\.retentionType, nullableInt\(summary\.retentionQuantity\), nullableInt\(summary\.gfsWeeklyWeeks\), summary\.gfsWeeklyDay, nullableInt\(summary\.gfsMonthlyMonths\), summary\.gfsMonthlyWeek, nullableInt\(summary\.gfsYearlyYears\), summary\.gfsYearlyMonth, summary\.lastResult, nullableTime\(summary\.lastBackup\), nullableTime\(summary\.nextRun\), summary\.restorePoints, now, summary\.errorMessage, raw\)',
+    re.S,
+)
+
+replacement = '''\t\t_, err = tx.ExecContext(ctx, `INSERT INTO vm_backup_summary SET
+  vm_id=?,provider='veeam',veeam_source_id=?,source_name=?,protected=?,
+  job_name=?,policy_name=?,repository_name=?,primary_repository_name=?,secondary_repository_names=?,
+  schedule_text=?,retention_type=?,retention_quantity=?,gfs_weekly_weeks=?,gfs_weekly_day=?,
+  gfs_monthly_months=?,gfs_monthly_week=?,gfs_yearly_years=?,gfs_yearly_month=?,
+  last_result=?,last_backup_at=?,next_run_at=?,restore_points=?,synced_at=?,error_message=?,raw_json=?,
+  cron_backup_notes=''
+ON DUPLICATE KEY UPDATE
+  provider='veeam',veeam_source_id=VALUES(veeam_source_id),source_name=VALUES(source_name),protected=VALUES(protected),
+  job_name=VALUES(job_name),policy_name=VALUES(policy_name),repository_name=VALUES(repository_name),
+  primary_repository_name=VALUES(primary_repository_name),secondary_repository_names=VALUES(secondary_repository_names),
+  schedule_text=VALUES(schedule_text),retention_type=VALUES(retention_type),retention_quantity=VALUES(retention_quantity),
+  gfs_weekly_weeks=VALUES(gfs_weekly_weeks),gfs_weekly_day=VALUES(gfs_weekly_day),
+  gfs_monthly_months=VALUES(gfs_monthly_months),gfs_monthly_week=VALUES(gfs_monthly_week),
+  gfs_yearly_years=VALUES(gfs_yearly_years),gfs_yearly_month=VALUES(gfs_yearly_month),
+  last_result=VALUES(last_result),last_backup_at=VALUES(last_backup_at),next_run_at=VALUES(next_run_at),
+  restore_points=VALUES(restore_points),synced_at=VALUES(synced_at),error_message=VALUES(error_message),raw_json=VALUES(raw_json)`,
+\t\t\tvmID, sourceID, record.Name, summary.protected, summary.jobNames, summary.policyName, summary.repositories, summary.primaryRepository, summary.secondaryRepositories, summary.scheduleText, summary.retentionType, nullableInt(summary.retentionQuantity), nullableInt(summary.gfsWeeklyWeeks), summary.gfsWeeklyDay, nullableInt(summary.gfsMonthlyMonths), summary.gfsMonthlyWeek, nullableInt(summary.gfsYearlyYears), summary.gfsYearlyMonth, summary.lastResult, nullableTime(summary.lastBackup), nullableTime(summary.nextRun), summary.restorePoints, now, summary.errorMessage, raw)'''
+
+s, n2 = pattern.subn(replacement, s, 1)
+
+# 3. VM neprotejata
+pattern = re.compile(
+    r'\t\t_, err := tx\.ExecContext\(ctx, `INSERT IGNORE INTO vm_backup_summary\(vm_id,provider,veeam_source_id,source_name,protected,job_name,policy_name,repository_name,last_result,restore_points,synced_at,error_message(?:,cron_backup_notes)?\).*?`, vmID, sourceID, record\.Name, now\)',
+    re.S,
+)
+
+replacement = '''\t\t_, err := tx.ExecContext(ctx, `INSERT IGNORE INTO vm_backup_summary SET
+  vm_id=?,provider='veeam',veeam_source_id=?,source_name=?,protected=0,
+  job_name='',policy_name='',repository_name='',last_result='',restore_points=0,
+  synced_at=?,error_message='',cron_backup_notes=''`, vmID, sourceID, record.Name, now)'''
+
+s, n3 = pattern.subn(replacement, s, 1)
+
+if (n1, n2, n3) != (1, 1, 1):
+    raise SystemExit(f"EROARE la patch: manual={n1}, protected={n2}, unprotected={n3}")
+
+p.write_text(s)
+
+print("OK - toate cele 3 INSERT-uri au fost corectate")
+PY
+
+gofmt -w internal/veeam/service.go
