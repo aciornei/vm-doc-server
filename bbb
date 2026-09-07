@@ -1,0 +1,5 @@
+cd /usr/local/src/vm-doc-server-0.18.0
+
+sed -i '/func validConfigForTest()/,/^}/ s/^[[:space:]]*return cfg$/\tapplyDefaults(\&cfg)\n\treturn cfg/' internal/config/config_test.go
+
+gofmt -w internal/config/config_test.go
