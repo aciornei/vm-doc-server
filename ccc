@@ -1,0 +1,32 @@
+cd /usr/local/src/vm-doc-server-0.18.0
+
+python3 - <<'PY'
+from pathlib import Path
+
+p = Path("internal/server/veeam.go")
+s = p.read_text()
+
+old = '''	v, err := a.Veeam.TestSource(r.Context(), id)
+	if err == nil {'''
+
+new = '''	v, err := a.Veeam.TestSource(r.Context(), id)
+	if err != nil {
+		a.Logger.Error("Veeam connection test failed", "source_id", id, "error", err)
+	}
+	if err == nil {'''
+
+if new in s:
+    print("Logging Veeam deja prezent")
+elif old in s:
+    s = s.replace(old, new, 1)
+    p.write_text(s)
+    print("OK - logging Veeam adaugat")
+else:
+    raise SystemExit("Nu am gasit functia testVeeamSource")
+
+PY
+
+gofmt -w internal/server/veeam.go
+
+GOPROXY=off GOFLAGS=-mod=vendor go test ./...
+GOPROXY=off GOFLAGS=-mod=vendor make build
