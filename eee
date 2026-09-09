@@ -1,0 +1,112 @@
+1. Creezi userul Linux
+
+Verifică întâi dacă există:
+
+id vm-doc-inventory
+
+Dacă nu există:
+
+useradd --system --no-create-home --shell "$(command -v nologin)" vm-doc-inventory
+
+Verificare:
+
+id vm-doc-inventory
+2. Verifici pluginul unix_socket în MariaDB
+
+Intră ca administrator:
+
+mariadb
+
+sau, pe instalațiile mai vechi:
+
+mysql -u root -p
+
+Apoi:
+
+SELECT VERSION();
+
+SELECT PLUGIN_NAME, PLUGIN_STATUS
+FROM information_schema.PLUGINS
+WHERE PLUGIN_NAME='unix_socket';
+
+Ar trebui să vezi ceva de forma:
+
+unix_socket    ACTIVE
+
+Pluginul unix_socket este instalat implicit pe majoritatea versiunilor MariaDB și autentifică userul folosind UID-ul procesului de pe socket-ul local.
+
+Dacă nu apare deloc:
+
+INSTALL SONAME 'auth_socket';
+3. Creezi userul MariaDB
+
+Mai întâi vezi dacă există deja:
+
+SELECT User, Host, plugin
+FROM mysql.user
+WHERE User='vm-doc-inventory';
+
+Dacă nu există:
+
+CREATE USER 'vm-doc-inventory'@'localhost'
+IDENTIFIED VIA unix_socket;
+
+Pe MariaDB 10.x, userul Linux și userul MariaDB trebuie să aibă același nume pentru această metodă, deci vm-doc-inventory este potrivit.
+
+4. Îi dai strict dreptul necesar
+
+Pentru inventarul nostru:
+
+GRANT SHOW DATABASES ON *.*
+TO 'vm-doc-inventory'@'localhost';
+
+SHOW DATABASES este un privilegiu global valid și nu îi acordă implicit acces de citire/modificare la tabele.
+
+Verifică:
+
+SHOW GRANTS FOR 'vm-doc-inventory'@'localhost';
+
+Ar trebui să ai aproximativ:
+
+GRANT SHOW DATABASES ON *.* TO `vm-doc-inventory`@`localhost` IDENTIFIED VIA unix_socket
+
+Nu trebuie FLUSH PRIVILEGES după CREATE USER / GRANT.
+
+5. Testul important
+
+Ieși din MariaDB:
+
+exit;
+
+Și rulează din Linux:
+
+runuser -u vm-doc-inventory -- \
+  mariadb --protocol=socket -u vm-doc-inventory -N -e "SHOW DATABASES;"
+
+Dacă sistemul are doar clientul mysql:
+
+runuser -u vm-doc-inventory -- \
+  mysql --protocol=socket -u vm-doc-inventory -N -e "SHOW DATABASES;"
+
+Nu trebuie să ceară parolă.
+
+Poți face și testul identității:
+
+runuser -u vm-doc-inventory -- \
+  mariadb --protocol=socket -u vm-doc-inventory \
+  -N -e "SELECT USER(), CURRENT_USER(), @@external_user;"
+
+Ar trebui să indice în esență:
+
+vm-doc-inventory@localhost
+vm-doc-inventory@localhost
+vm-doc-inventory
+6. Verificăm că NU poate citi date
+
+Asta este la fel de important. Încearcă:
+
+runuser -u vm-doc-inventory -- \
+  mariadb --protocol=socket -u vm-doc-inventory \
+  -e "SELECT * FROM nume_baza.nume_tabel LIMIT 1;"
+
+Ar trebui să primești Access denied.
