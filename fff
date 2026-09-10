@@ -1,0 +1,137 @@
+1. Userul Linux
+
+Dacă l-ai creat deja pentru MySQL, nu mai faci nimic:
+
+id vm-doc-inventory
+
+Dacă nu există:
+
+useradd --system --no-create-home --shell /sbin/nologin vm-doc-inventory
+
+Pe SUSE 11 verifică întâi:
+
+which nologin
+
+și folosești calea găsită.
+
+2. PostgreSQL 8 – port 5434
+
+Intră în instanța 8 folosind metoda care îți merge deja:
+
+psql -U postgres -p 5434 -h 127.0.0.1 -d template1
+
+Creează rolul:
+
+CREATE ROLE "vm-doc-inventory" LOGIN;
+
+Apoi vezi exact configurația instanței:
+
+SHOW port;
+SHOW data_directory;
+SHOW hba_file;
+SHOW unix_socket_directory;
+
+Ieși cu:
+
+\q
+
+În pg_hba.conf al PostgreSQL 8, înaintea regulilor generale locale, adaugi:
+
+local   template1   vm-doc-inventory   ident
+
+Poți pune și:
+
+local   all         vm-doc-inventory   ident
+
+dar eu prefer prima variantă, mai restrictivă. PostgreSQL 8 suportă ident pentru conexiuni locale Unix și verifică userul OS față de userul PostgreSQL.
+
+Reîncarci configurația:
+
+psql -U postgres -p 5434 -h 127.0.0.1 -d template1 \
+  -c "SELECT pg_reload_conf();"
+3. Test PostgreSQL 8 fără parolă
+
+Nu pune -h 127.0.0.1, pentru că vrem socket Unix:
+
+su -s /bin/sh -c \
+'psql -w -U vm-doc-inventory -p 5434 -d template1 -Atc "SELECT datname FROM pg_database WHERE datistemplate=false ORDER BY datname;"' \
+vm-doc-inventory
+
+Ar trebui să vezi ceva de genul:
+
+aplicatie1
+aplicatie2
+raportare
+
+fără parolă.
+
+Dacă spune că nu găsește serverul/socket-ul, atunci folosim explicit directorul întors de:
+
+SHOW unix_socket_directory;
+
+de exemplu:
+
+su -s /bin/sh -c \
+'psql -h /var/run/postgresql -w -U vm-doc-inventory -p 5434 -d template1 -Atc "SELECT datname FROM pg_database WHERE datistemplate=false ORDER BY datname;"' \
+vm-doc-inventory
+4. PostgreSQL 9
+
+Cum la tine nu există baza postgres, intrăm direct în template1.
+
+De exemplu, dacă este pe 5432:
+
+psql -U postgres -p 5432 -d template1
+
+apoi:
+
+CREATE ROLE "vm-doc-inventory" LOGIN;
+
+SHOW port;
+SHOW data_directory;
+SHOW hba_file;
+
+Pentru versiunile PostgreSQL 9 foarte vechi, ca să avem aceeași configurație compatibilă cu PG8, putem folosi tot ident pe socket:
+
+local   template1   vm-doc-inventory   ident
+
+Asta evită să ne complicăm cu diferențele dintre PostgreSQL 8/9 privind denumirea metodei peer.
+
+Reload:
+
+SELECT pg_reload_conf();
+
+și test:
+
+su -s /bin/sh -c \
+'psql -w -U vm-doc-inventory -p 5432 -d template1 -Atc "SELECT datname FROM pg_database WHERE datistemplate=false ORDER BY datname;"' \
+vm-doc-inventory
+5. Pentru joburile PostgreSQL
+
+După ce conexiunile de mai sus funcționează, verificăm dacă ai pgAgent sau pg_cron.
+
+În fiecare instanță poți rula ca postgres:
+
+SELECT nspname
+FROM pg_namespace
+WHERE nspname IN ('pgagent','cron');
+
+Dacă întoarce:
+
+pgagent
+
+atunci sunt foarte probabil joburi pgAgent. Dacă întoarce:
+
+cron
+
+avem pg_cron.
+
+Pentru început nu îi da privilegii suplimentare lui vm-doc-inventory. Actualizează agentul la 1.6.10, colectează și vedem ce raportează. Dacă apare permission_denied doar la scheduled jobs, îi acordăm punctual SELECT doar pe tabelele de metadata necesare, nu acces general la baze.
+
+Ordinea în care aș face eu acum
+1. Creezi vm-doc-inventory în PostgreSQL 8
+2. pui local template1 vm-doc-inventory ident în pg_hba PG8
+3. testezi comanda pe 5434
+4. faci același lucru pe PostgreSQL 9 / 5432
+5. testezi
+6. instalezi agent 1.6.10
+7. Colectează din vm-doc
