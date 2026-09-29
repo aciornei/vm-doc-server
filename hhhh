@@ -1,7 +1,0 @@
-SELECT
-    target_code,
-    target_name,
-    parent_document_id,
-    active
-FROM outline_targets
-WHERE target_code = 'virtualization';
