@@ -1,0 +1,14 @@
+SELECT
+    enabled,
+    base_url,
+    collection_id,
+    verify_tls,
+    allow_http,
+    request_timeout_seconds,
+    updated_at,
+    CASE
+        WHEN api_key_ciphertext IS NULL THEN 'NU'
+        ELSE CONCAT('DA (', LENGTH(api_key_ciphertext), ' caractere)')
+    END AS api_key
+FROM outline_settings
+WHERE id = 1;
