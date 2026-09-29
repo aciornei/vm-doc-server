@@ -1,0 +1,246 @@
+-- ============================================================
+-- VM-DOC - nomenclator sisteme de operare nesuportate
+-- Pentru instalatii FARA Ubuntu Pro / ESM
+-- ============================================================
+
+-- 1. Asiguram existenta categoriei
+INSERT INTO nomenclature_categories
+    (code, label, sort_order, active)
+VALUES
+    ('unsupported_os', 'Sisteme de operare nesuportate', 90, 1)
+ON DUPLICATE KEY UPDATE
+    label = VALUES(label),
+    sort_order = VALUES(sort_order),
+    active = 1;
+
+
+-- ============================================================
+-- 2. Reparare unicitate nomenclator
+--
+-- Initial:
+-- UNIQUE(category_code, name)
+--
+-- Devine:
+-- UNIQUE(category_code, name, item_code)
+--
+-- Necesar pentru:
+-- Debian / 10
+-- Debian / 11
+-- Ubuntu / 18.04
+-- Ubuntu / 20.04
+-- etc.
+-- ============================================================
+
+SET @idx_cols = (
+    SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index)
+    FROM information_schema.statistics
+    WHERE table_schema = DATABASE()
+      AND table_name = 'nomenclature_items'
+      AND index_name = 'uq_nomenclature_category_name'
+);
+
+SET @sql = IF(
+    @idx_cols = 'category_code,name',
+    'ALTER TABLE nomenclature_items
+       DROP INDEX uq_nomenclature_category_name,
+       ADD UNIQUE KEY uq_nomenclature_category_name
+           (category_code, name, item_code)',
+    'SELECT ''Index deja corect'' AS info'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+
+-- ============================================================
+-- 3. Ubuntu
+-- FARA Ubuntu Pro / ESM
+-- ============================================================
+
+INSERT INTO nomenclature_items
+(category_code, name, item_code, description, sort_order, active)
+VALUES
+
+('unsupported_os','Ubuntu','12.04',
+ 'Ubuntu 12.04 - iesit din suport',100,1),
+
+('unsupported_os','Ubuntu','14.04',
+ 'Ubuntu 14.04 - iesit din suport standard',110,1),
+
+('unsupported_os','Ubuntu','16.04',
+ 'Ubuntu 16.04 - iesit din suport standard; fara Ubuntu Pro/ESM',120,1),
+
+('unsupported_os','Ubuntu','18.04',
+ 'Ubuntu 18.04 - suport standard incheiat; fara Ubuntu Pro/ESM',130,1),
+
+('unsupported_os','Ubuntu','20.04',
+ 'Ubuntu 20.04 - suport standard incheiat in mai 2025; fara Ubuntu Pro/ESM',140,1)
+
+ON DUPLICATE KEY UPDATE
+ description = VALUES(description),
+ sort_order = VALUES(sort_order),
+ active = 1;
+
+
+-- ============================================================
+-- 4. Debian
+-- Debian 12 NU este introdus - este inca suportat LTS
+-- ============================================================
+
+INSERT INTO nomenclature_items
+(category_code, name, item_code, description, sort_order, active)
+VALUES
+
+('unsupported_os','Debian','7',
+ 'Debian 7 - iesit din suport',200,1),
+
+('unsupported_os','Debian','8',
+ 'Debian 8 - iesit din suport',210,1),
+
+('unsupported_os','Debian','9',
+ 'Debian 9 - iesit din suport',220,1),
+
+('unsupported_os','Debian','10',
+ 'Debian 10 - iesit din suport',230,1),
+
+('unsupported_os','Debian','11',
+ 'Debian 11 Bullseye - LTS incheiat la 31 august 2026',240,1)
+
+ON DUPLICATE KEY UPDATE
+ description = VALUES(description),
+ sort_order = VALUES(sort_order),
+ active = 1;
+
+
+-- ============================================================
+-- 5. CentOS Linux
+-- CentOS Stream NU va fi afectat de aceste reguli
+-- deoarece cautam "CentOS Linux"
+-- ============================================================
+
+INSERT INTO nomenclature_items
+(category_code, name, item_code, description, sort_order, active)
+VALUES
+
+('unsupported_os','CentOS Linux','6',
+ 'CentOS Linux 6 - EOL',300,1),
+
+('unsupported_os','CentOS Linux','7',
+ 'CentOS Linux 7 - EOL',310,1),
+
+('unsupported_os','CentOS Linux','8',
+ 'CentOS Linux 8 - EOL',320,1)
+
+ON DUPLICATE KEY UPDATE
+ description = VALUES(description),
+ sort_order = VALUES(sort_order),
+ active = 1;
+
+
+-- ============================================================
+-- 6. Microsoft - clar iesite din suport normal
+-- ============================================================
+
+INSERT INTO nomenclature_items
+(category_code, name, item_code, description, sort_order, active)
+VALUES
+
+('unsupported_os','Windows XP','',
+ 'Microsoft Windows XP - iesit din suport',400,1),
+
+('unsupported_os','Windows Vista','',
+ 'Microsoft Windows Vista - iesit din suport',410,1),
+
+('unsupported_os','Windows 7','',
+ 'Microsoft Windows 7 - iesit din suport',420,1),
+
+('unsupported_os','Windows Server 2003','',
+ 'Microsoft Windows Server 2003 / 2003 R2 - iesit din suport',430,1),
+
+('unsupported_os','Windows Server 2008','',
+ 'Microsoft Windows Server 2008 / 2008 R2 - iesit din suport',440,1)
+
+ON DUPLICATE KEY UPDATE
+ description = VALUES(description),
+ sort_order = VALUES(sort_order),
+ active = 1;
+
+
+-- ============================================================
+-- 7. Ubuntu non-LTS deja EOL
+-- ============================================================
+
+INSERT INTO nomenclature_items
+(category_code, name, item_code, description, sort_order, active)
+VALUES
+
+('unsupported_os','Ubuntu','20.10','Ubuntu 20.10 - EOL',500,1),
+('unsupported_os','Ubuntu','21.04','Ubuntu 21.04 - EOL',510,1),
+('unsupported_os','Ubuntu','21.10','Ubuntu 21.10 - EOL',520,1),
+('unsupported_os','Ubuntu','22.10','Ubuntu 22.10 - EOL',530,1),
+('unsupported_os','Ubuntu','23.04','Ubuntu 23.04 - EOL',540,1),
+('unsupported_os','Ubuntu','23.10','Ubuntu 23.10 - EOL',550,1),
+('unsupported_os','Ubuntu','24.10','Ubuntu 24.10 - EOL',560,1),
+('unsupported_os','Ubuntu','25.04','Ubuntu 25.04 - EOL',570,1),
+('unsupported_os','Ubuntu','25.10','Ubuntu 25.10 - EOL',580,1)
+
+ON DUPLICATE KEY UPDATE
+ description = VALUES(description),
+ sort_order = VALUES(sort_order),
+ active = 1;
+
+
+-- ============================================================
+-- VERIFICARE
+-- ============================================================
+
+SELECT
+    id,
+    name AS sistem_operare,
+    item_code AS versiune,
+    description,
+    active
+FROM nomenclature_items
+WHERE category_code = 'unsupported_os'
+ORDER BY sort_order, name, item_code;
+
+
+
+
+
+
+INSERT INTO nomenclature_items
+(category_code, name, item_code, description, sort_order, active)
+VALUES
+(
+    'unsupported_os',
+    'Windows Server 2012',
+    '',
+    'Windows Server 2012 / 2012 R2 - fara Extended Security Updates',
+    450,
+    1
+)
+ON DUPLICATE KEY UPDATE
+ description = VALUES(description),
+ sort_order = VALUES(sort_order),
+ active = 1;
+
+
+
+
+INSERT INTO nomenclature_items
+(category_code, name, item_code, description, sort_order, active)
+VALUES
+(
+    'unsupported_os',
+    'SUSE Linux Enterprise Server',
+    '11',
+    'SLES 11 - fara contract LTSS/LTSS Core',
+    600,
+    1
+)
+ON DUPLICATE KEY UPDATE
+ description = VALUES(description),
+ sort_order = VALUES(sort_order),
+ active = 1;
