@@ -1,0 +1,50 @@
+SELECT
+    name,
+    object_type,
+    subnet,
+    start_ip,
+    end_ip,
+    fqdn,
+    raw_json
+FROM fortigate_addresses
+WHERE source_id = 1
+  AND vdom = 'INTRANET'
+  AND name = 'DTI-ANSIBLE-01';
+
+
+SELECT
+    vm.id,
+    vm.name,
+    vm.primary_ip AS vm_primary_ip,
+    i.primary_ip AS inventory_primary_ip,
+    GROUP_CONCAT(DISTINCT vip.ip_address ORDER BY vip.ip_address) AS vcenter_ips
+FROM virtual_machines vm
+LEFT JOIN inventory_snapshots i
+       ON i.id = vm.current_inventory_id
+LEFT JOIN vcenter_vm_ips vip
+       ON vip.vm_id = vm.id
+WHERE vm.name = 'DTI-ANSIBLE-01'
+GROUP BY
+    vm.id,
+    vm.name,
+    vm.primary_ip,
+    i.primary_ip;
+
+SELECT
+    p.policy_id,
+    p.name,
+    p.status,
+    p.srcaddr_json,
+    a.name AS address_object,
+    a.object_type,
+    a.subnet,
+    a.start_ip,
+    a.end_ip
+FROM fortigate_policies p
+JOIN fortigate_addresses a
+  ON a.source_id = p.source_id
+ AND a.vdom = p.vdom
+WHERE p.source_id = 1
+  AND p.vdom = 'INTRANET'
+  AND p.policy_id = 1268
+  AND JSON_SEARCH(p.srcaddr_json, 'one', a.name) IS NOT NULL;
