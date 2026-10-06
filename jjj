@@ -1,3 +1,0 @@
-curl -k \
-  -H "Authorization: Bearer TOKENUL_TAU" \
-  "https://IP_FORTI/api/v2/monitor/firewall/address-dynamic?vdom=INTRANET&mkey=DTI-ANSIBLE-01"
