@@ -1,0 +1,13 @@
+mongo --host 127.0.0.1 --port 27017 --quiet \
+  --eval '
+    db.getMongo().setReadPref("secondaryPreferred");
+    printjson(db.getMongo().getDBs());
+  '
+
+
+
+mongo --host 127.0.0.1 --port 27017 --quiet \
+  --eval '
+    db.getMongo().setSlaveOk();
+    printjson(db.getMongo().getDBs());
+  '
