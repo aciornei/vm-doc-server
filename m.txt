@@ -1,0 +1,73 @@
+1. Topul modificărilor din baza de date
+
+SELECT
+    category,
+    object_type,
+    change_type,
+    COUNT(*) AS total_modificari,
+    COUNT(DISTINCT vm_id) AS vm_afectate
+FROM inventory_changes
+WHERE occurred_at >= NOW() - INTERVAL 30 DAY
+GROUP BY category, object_type, change_type
+ORDER BY total_modificari DESC
+LIMIT 30;
+
+2. Care obiecte generează cel mai mult zgomot?
+
+SELECT
+    category,
+    object_type,
+    object_label,
+    COUNT(*) AS modificari,
+    COUNT(DISTINCT vm_id) AS vm_afectate
+FROM inventory_changes
+WHERE occurred_at >= NOW() - INTERVAL 30 DAY
+GROUP BY category, object_type, object_label
+ORDER BY modificari DESC
+LIMIT 50;
+
+3. Grupăm serviciile care își schimbă numărul instanței
+
+SELECT
+    REGEXP_REPLACE(
+        object_key,
+        '@[0-9]+',
+        '@#'
+    ) AS serviciu_normalizat,
+    change_type,
+    COUNT(*) AS total,
+    COUNT(DISTINCT vm_id) AS vm_afectate
+FROM inventory_changes
+WHERE category = 'services'
+  AND occurred_at >= NOW() - INTERVAL 30 DAY
+GROUP BY serviciu_normalizat, change_type
+ORDER BY total DESC
+LIMIT 50;
+
+
+SELECT
+    COUNT(*) AS total,
+    SUM(NOT (
+        JSON_UNQUOTE(JSON_EXTRACT(old_json,'$.active_state'))
+        <=>
+        JSON_UNQUOTE(JSON_EXTRACT(new_json,'$.active_state'))
+    )) AS active_state,
+    SUM(NOT (
+        JSON_UNQUOTE(JSON_EXTRACT(old_json,'$.sub_state'))
+        <=>
+        JSON_UNQUOTE(JSON_EXTRACT(new_json,'$.sub_state'))
+    )) AS sub_state,
+    SUM(NOT (
+        JSON_UNQUOTE(JSON_EXTRACT(old_json,'$.enabled_state'))
+        <=>
+        JSON_UNQUOTE(JSON_EXTRACT(new_json,'$.enabled_state'))
+    )) AS enabled_state,
+    SUM(NOT (
+        JSON_UNQUOTE(JSON_EXTRACT(old_json,'$.package_version'))
+        <=>
+        JSON_UNQUOTE(JSON_EXTRACT(new_json,'$.package_version'))
+    )) AS package_version
+FROM inventory_changes
+WHERE category = 'services'
+  AND change_type = 'modified'
+  AND occurred_at >= NOW() - INTERVAL 30 DAY;
