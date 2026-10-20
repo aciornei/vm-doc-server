@@ -1,0 +1,29 @@
+SELECT
+    vm.name,
+    COUNT(*) AS total,
+    COUNT(DISTINCT c.object_key) AS porturi_distincte
+FROM inventory_changes c
+JOIN virtual_machines vm ON vm.id = c.vm_id
+WHERE c.category = 'ports'
+  AND CAST(
+      SUBSTRING_INDEX(c.object_label, '/', -1)
+      AS UNSIGNED
+  ) BETWEEN 49152 AND 65535
+  AND c.occurred_at >= NOW() - INTERVAL 30 DAY
+GROUP BY vm.id, vm.name
+ORDER BY total DESC
+LIMIT 20;
+
+SELECT
+    c.object_label,
+    c.change_type,
+    COUNT(*) AS total,
+    COUNT(DISTINCT c.vm_id) AS vm_afectate
+FROM inventory_changes c
+WHERE c.category = 'firewall'
+  AND c.object_type = 'rule'
+  AND c.object_key LIKE 'nftables|%'
+  AND c.occurred_at >= NOW() - INTERVAL 30 DAY
+GROUP BY c.object_label, c.change_type
+ORDER BY total DESC
+LIMIT 30;
