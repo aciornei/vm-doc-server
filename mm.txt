@@ -71,3 +71,42 @@ FROM inventory_changes
 WHERE category = 'services'
   AND change_type = 'modified'
   AND occurred_at >= NOW() - INTERVAL 30 DAY;
+
+SELECT
+  CASE
+    WHEN CAST(SUBSTRING_INDEX(object_label, '/', -1)
+              AS UNSIGNED) < 1024
+      THEN '0-1023'
+    WHEN CAST(SUBSTRING_INDEX(object_label, '/', -1)
+              AS UNSIGNED) < 32768
+      THEN '1024-32767'
+    WHEN CAST(SUBSTRING_INDEX(object_label, '/', -1)
+              AS UNSIGNED) < 49152
+      THEN '32768-49151'
+    ELSE '49152-65535'
+  END AS interval_porturi,
+  COUNT(*) AS total,
+  SUM(change_type = 'added') AS adaugate,
+  SUM(change_type = 'removed') AS eliminate,
+  COUNT(DISTINCT vm_id) AS vm_afectate
+FROM inventory_changes
+WHERE category = 'ports'
+  AND occurred_at >= NOW() - INTERVAL 30 DAY
+GROUP BY interval_porturi
+ORDER BY total DESC;
+
+
+SELECT
+  SUBSTRING_INDEX(
+    SUBSTRING_INDEX(object_key, '|', 3),
+    '|', -1
+  ) AS backend,
+  change_type,
+  COUNT(*) AS total,
+  COUNT(DISTINCT vm_id) AS vm_afectate
+FROM inventory_changes
+WHERE category = 'firewall'
+  AND object_type = 'rule'
+  AND occurred_at >= NOW() - INTERVAL 30 DAY
+GROUP BY backend, change_type
+ORDER BY total DESC;
