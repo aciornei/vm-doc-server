@@ -1,0 +1,8 @@
+[auth.generic_oauth]
+
+org_attribute_path = department == 'calculator' && [contains(groups || `[]`, 'Grafana-Calculator-Admins') && 'calculator-admin' || 'calculator-viewer'] || `[]`
+
+org_mapping = calculator-viewer:calculator:Viewer calculator-admin:calculator:Admin
+
+skip_org_role_sync = false
+allow_assign_grafana_admin = false
