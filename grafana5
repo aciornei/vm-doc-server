@@ -1,0 +1,20 @@
+[users]
+auto_assign_org = true
+auto_assign_org_id = 1
+auto_assign_org_role = Viewer
+
+[auth.generic_oauth]
+
+# Administratorii globali, din grupul AD
+role_attribute_path = contains(groups || `[]`, 'Grafana-Global-Admins') && 'GrafanaAdmin'
+allow_assign_grafana_admin = true
+
+# Department din Keycloak -> organizatie Grafana
+org_attribute_path = [department || 'NO_DEPARTMENT']
+
+# X primeste acces la X_ORG;
+# toti utilizatorii primesc Viewer in organizatia 1
+org_mapping = X:X_ORG:Viewer *:1:Viewer
+
+skip_org_role_sync = false
+role_attribute_strict = false
