@@ -1,0 +1,15 @@
+BEGIN;
+
+UPDATE user_entity
+SET email_verified = TRUE
+WHERE realm_id = (
+    SELECT id FROM realm WHERE name = 'AD'
+)
+AND email IS NOT NULL
+AND TRIM(email) <> ''
+AND email_verified = FALSE;
+
+COMMIT;
+
+/opt/keycloak/bin/kcadm.sh create clear-user-cache \
+  -r AD -s realm=AD
