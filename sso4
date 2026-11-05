@@ -1,0 +1,21 @@
+### Obiectiv
+Verificarea tuturor mașinilor virtuale active din VM-DOC Server pentru identificarea celor care nu sunt incluse în sistemul de backup Veeam sau care prezintă probleme de protecție.
+
+### Activități
+- [ ] Extragerea listei de VM-uri active din VM-DOC Server.
+- [ ] Identificarea VM-urilor care sunt incluse în joburile de backup Veeam.
+- [ ] Identificarea VM-urilor care nu sunt incluse în niciun job de backup.
+- [ ] Verificarea ultimei execuții reușite și a existenței punctelor de restaurare.
+- [ ] Identificarea VM-urilor cu backup eșuat sau neactualizat conform politicii.
+- [ ] Întocmirea raportului cu VM-urile neprotejate și excepțiile aprobate.
+- [ ] Documentarea problemelor și deschiderea de issue-uri separate pentru remediere.
+
+### Criterii de finalizare
+- Toate VM-urile active au fost verificate.
+- Fiecare VM are un status de protecție documentat.
+- VM-urile fără backup sau cu backup necorespunzător au fost identificate.
+- A fost atașat raportul verificării.
+- Problemele identificate au issue-uri de remediere asociate.
+
+### Rezultat așteptat
+Raport cu numele VM-ului, mediul PROD/TEST/DEV, statusul backupului, ultimul backup reușit și observațiile relevante.
