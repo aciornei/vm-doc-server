@@ -1,0 +1,14 @@
+cd /opt/vm-doc-server
+
+sudo systemctl stop vm-doc-collector
+
+CGO_ENABLED=0 go build -mod=vendor -trimpath \
+  -o /tmp/vm-doc-collector.new ./cmd/vm-doc-collector
+
+sudo cp -a bin/vm-doc-collector \
+  bin/vm-doc-collector.backup
+
+sudo install -m 0755 /tmp/vm-doc-collector.new \
+  bin/vm-doc-collector
+
+sudo systemctl start vm-doc-collector
